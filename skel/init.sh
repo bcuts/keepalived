@@ -40,6 +40,7 @@ config_keepalived() {
       kube_api_vip="$(compgen -A variable | grep -E 'KEEPALIVED_VIRTUAL_IPADDRESS_[0-9]{1,3}' | head -1)"
       KUBE_APISERVER_ADDRESS="$(echo "${!kube_api_vip}" | grep -o -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')"
     fi
+    KUBE_APISERVER_HOST_ADDRESS=${KUBE_APISERVER_HOST_ADDRESS:-localhost}
     KUBE_APISERVER_PORT=${KUBE_APISERVER_PORT:-6443}
     KUBE_APISERVER_CHK_INTERVAL=${KUBE_APISERVER_CHK_INTERVAL:-'3'}
     KUBE_APISERVER_CHK_WEIGHT=${KUBE_APISERVER_CHK_WEIGHT:-'-50'}
@@ -47,7 +48,7 @@ config_keepalived() {
     KUBE_APISERVER_CHK_RISE=${KUBE_APISERVER_CHK_RISE:-'2'}
     {
       echo 'vrrp_script chk_kube_apiserver {'
-      echo "  script \"/usr/lib/keepalived/scripts/chk_kube_apiserver.sh $KUBE_APISERVER_ADDRESS $KUBE_APISERVER_PORT\""
+      echo "  script \"/usr/lib/keepalived/scripts/chk_kube_apiserver.sh $KUBE_APISERVER_HOST_ADDRESS $KUBE_APISERVER_ADDRESS $KUBE_APISERVER_PORT\""
       echo "  interval $KUBE_APISERVER_CHK_INTERVAL"
       echo "  fall $KUBE_APISERVER_CHK_FALL"
       echo "  rise $KUBE_APISERVER_CHK_RISE"
@@ -122,6 +123,7 @@ init_vars() {
   KEEPALIVED_KUBE_APISERVER_CHECK=${KEEPALIVED_KUBE_APISERVER_CHECK:-false}
   KEEPALIVED_CONF=${KEEPALIVED_CONF:-/etc/keepalived/keepalived.conf}
   KEEPALIVED_VAR_RUN=${KEEPALIVED_VAR_RUN:-/var/run/keepalived}
+
   if [[ ${KEEPALIVED_DEBUG,,} == 'true' ]]; then
     local kd_cmd="/usr/sbin/keepalived -n -l -D -f $KEEPALIVED_CONF"
   else
@@ -135,7 +137,7 @@ main() {
   if [[ ${KEEPALIVED_AUTOCONF,,} == 'true' ]]; then
     config_keepalived
   fi
-  rm -fr $KEEPALIVED_VAR_RUN
+  rm -fr "$KEEPALIVED_VAR_RUN"
   # shellcheck disable=SC2086
   exec $KEEPALIVED_CMD
 }
